@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from prometheus_client import make_asgi_app
 
 from app.config import get_settings
-from app.database import create_tables, close_db
+from app.database import close_db
 from app.api import auth, users, products#, categories, cart, orders, payments, admin, search
 from app.utils.exceptions import (
     ValidationException,
@@ -33,10 +33,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan handler"""
-    # Startup
-    await create_tables()
-    
+    """Application lifespan handler"""    
     # Initialize Elasticsearch
     search_service = SearchService()
     await search_service.create_indices()

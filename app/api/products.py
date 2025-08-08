@@ -24,7 +24,7 @@ from app.schemas.product import (
     ProductReviewResponse
 )
 from app.services.search_service import SearchService
-# from app.services.file_service import FileService
+from app.services.file_service import FileService
 from app.utils.exceptions import NotFoundException, ValidationException, ForbiddenException
 from app.config import get_settings
 
@@ -435,32 +435,32 @@ async def upload_product_images(
     if not product:
         raise NotFoundException("Product not found")
     
-    # file_service = FileService()
-    # uploaded_images = []
+    file_service = FileService()
+    uploaded_images = []
     
-    # for i, file in enumerate(files):
-    #     # Validate file
-    #     if not file.content_type.startswith('image/'):
-    #         raise ValidationException(f"File {file.filename} is not an image")
+    for i, file in enumerate(files):
+        # Validate file
+        if not file.content_type or not file.content_type.startswith('image/'):
+            raise ValidationException(f"File {file.filename} is not an image")
         
-    #     # Upload file
-    #     image_url = await file_service.upload_product_image(file, product_id)
+        # Upload file
+        image_url = await file_service.upload_product_image(file, product_id)
         
-    #     # Create product image record
-    #     product_image = ProductImage(
-    #         product_id=product_id,
-    #         image_url=image_url,
-    #         alt_text=f"{product.name} - Image {i + 1}",
-    #         sort_order=i
-    #     )
-    #     session.add(product_image)
-    #     uploaded_images.append(image_url)
+        # Create product image record
+        product_image = ProductImage(
+            product_id=product_id,
+            image_url=image_url,
+            alt_text=f"{product.name} - Image {i + 1}",
+            sort_order=i
+        )
+        session.add(product_image)
+        uploaded_images.append(image_url)
     
     await session.commit()
     
     return {
         "message": f"Successfully uploaded {len(files)} images",
-        # "image_urls": uploaded_images
+        "image_urls": uploaded_images
     }
 
 
