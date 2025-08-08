@@ -4,7 +4,7 @@ Authentication API routes
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
@@ -34,6 +34,7 @@ limiter = Limiter(key_func=get_remote_address)
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_data: RegisterRequest,
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_async_session)
@@ -59,7 +60,7 @@ async def register(
     
     # Send verification email
     email_service = EmailService()
-    verification_token = await auth_service.create_email_verification_token(user.email)
+    verification_token = auth_service.create_email_verification_token(user.email)
     background_tasks.add_task(
         email_service.send_verification_email,
         user.email,
@@ -73,6 +74,7 @@ async def register(
 @router.post("/login", response_model=Token)
 @limiter.limit("10/minute")
 async def login(
+    request: Request,
     credentials: LoginRequest,
     session: AsyncSession = Depends(get_async_session)
 ):
@@ -117,6 +119,7 @@ async def login(
 @router.post("/refresh", response_model=Token)
 @limiter.limit("20/minute")
 async def refresh_token(
+    request: Request,
     token_data: RefreshTokenRequest,
     session: AsyncSession = Depends(get_async_session)
 ):
@@ -135,14 +138,14 @@ async def refresh_token(
         raise UnauthorizedException("Invalid refresh token")
     
     # Get user
-    user = await auth_service.get_user_by_email(payload.get("sub"), session)
+    user = await auth_service.get_user_by_email(payload.get("sub"), session) # type: ignore
     if not user or not user.is_active:
         raise UnauthorizedException("User not found or inactive")
     
     # Create new tokens
-    token_data = {"sub": user.email, "user_id": str(user.id)}
-    access_token = auth_service.create_access_token(token_data)
-    new_refresh_token = auth_service.create_refresh_token(token_data)
+    token = {"sub": user.email, "user_id": str(user.id)}
+    access_token = auth_service.create_access_token(token)
+    new_refresh_token = auth_service.create_refresh_token(token)
     
     return Token(
         access_token=access_token,
@@ -166,7 +169,8 @@ async def logout(
 @router.post("/forgot-password", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("3/minute")
 async def forgot_password(
-    request: PasswordResetRequest,
+    request: Request,
+    request_data: PasswordResetRequest,
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_async_session)
 ):
@@ -178,7 +182,7 @@ async def forgot_password(
     Sends password reset email if user exists
     """
     auth_service = AuthService()
-    user = await auth_service.get_user_by_email(request.email, session)
+    user = await auth_service.get_user_by_email(request_data.email, session)
     
     if user and user.is_active:
         # Create password reset token
@@ -200,7 +204,8 @@ async def forgot_password(
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
 async def reset_password(
-    request: PasswordResetConfirm,
+    request: Request,
+    request_data: PasswordResetConfirm,
     session: AsyncSession = Depends(get_async_session)
 ):
     """
@@ -212,7 +217,7 @@ async def reset_password(
     auth_service = AuthService()
     
     # Verify reset token
-    email = auth_service.verify_password_reset_token(request.token)
+    email = auth_service.verify_password_reset_token(request_data.token)
     if not email:
         raise UnauthorizedException("Invalid or expired reset token")
     
@@ -222,7 +227,7 @@ async def reset_password(
         raise UnauthorizedException("User not found or inactive")
     
     # Update password
-    await auth_service.update_password(user, request.new_password, session)
+    await auth_service.update_password(user, request_data.new_password, session)
     
     return {"message": "Password successfully reset"}
 
@@ -230,6 +235,7 @@ async def reset_password(
 @router.post("/verify-email", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("10/minute")
 async def verify_email(
+    request: Request,
     token: str,
     session: AsyncSession = Depends(get_async_session)
 ):

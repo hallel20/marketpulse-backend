@@ -16,7 +16,7 @@ from prometheus_client import make_asgi_app
 
 from app.config import get_settings
 from app.database import create_tables, close_db
-from app.api import auth, users, products, categories, cart, orders, payments, admin, search
+from app.api import auth, users, products#, categories, cart, orders, payments, admin, search
 from app.utils.exceptions import (
     ValidationException,
     NotFoundException,
@@ -24,7 +24,7 @@ from app.utils.exceptions import (
     ForbiddenException
 )
 from app.services.search_service import SearchService
-from app.tasks.celery_app import celery_app
+# from app.tasks.celery_app import celery_app
 
 settings = get_settings()
 
@@ -60,8 +60,8 @@ app = FastAPI(
 )
 
 # Add rate limiting
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.state.limiter = limiter # type: ignore
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler) # type: ignore
 
 # Middleware
 app.add_middleware(
@@ -79,28 +79,28 @@ app.add_middleware(
 
 # Exception handlers
 @app.exception_handler(ValidationException)
-async def validation_exception_handler(request: Request, exc: ValidationException):
+async def validation_exception_handler(_: Request, exc: ValidationException) -> JSONResponse:
     return JSONResponse(
         status_code=400,
         content={"error": "Validation Error", "detail": exc.detail}
     )
 
 @app.exception_handler(NotFoundException)
-async def not_found_exception_handler(request: Request, exc: NotFoundException):
+async def not_found_exception_handler(_: Request, exc: NotFoundException) -> JSONResponse:
     return JSONResponse(
         status_code=404,
         content={"error": "Not Found", "detail": exc.detail}
     )
 
 @app.exception_handler(UnauthorizedException)
-async def unauthorized_exception_handler(request: Request, exc: UnauthorizedException):
+async def unauthorized_exception_handler(_: Request, exc: UnauthorizedException) -> JSONResponse:
     return JSONResponse(
         status_code=401,
         content={"error": "Unauthorized", "detail": exc.detail}
     )
 
 @app.exception_handler(ForbiddenException)
-async def forbidden_exception_handler(request: Request, exc: ForbiddenException):
+async def forbidden_exception_handler(_: Request, exc: ForbiddenException) -> JSONResponse:
     return JSONResponse(
         status_code=403,
         content={"error": "Forbidden", "detail": exc.detail}
@@ -110,12 +110,12 @@ async def forbidden_exception_handler(request: Request, exc: ForbiddenException)
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(products.router, prefix="/api/v1/products", tags=["Products"])
-app.include_router(categories.router, prefix="/api/v1/categories", tags=["Categories"])
-app.include_router(cart.router, prefix="/api/v1/cart", tags=["Cart"])
-app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
-app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"])
-app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
-app.include_router(search.router, prefix="/api/v1/search", tags=["Search"])
+# app.include_router(categories.router, prefix="/api/v1/categories", tags=["Categories"])
+# app.include_router(cart.router, prefix="/api/v1/cart", tags=["Cart"])
+# app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
+# app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"])
+# app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
+# app.include_router(search.router, prefix="/api/v1/search", tags=["Search"])
 
 # Health check
 @app.get("/health")

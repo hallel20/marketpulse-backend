@@ -1,1 +1,9 @@
+__pycache__/
+*.pyc
 .env
+
+# development db
+dev.db
+
+# static files
+static/uploads

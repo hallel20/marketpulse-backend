@@ -3,7 +3,6 @@ Order-related database models
 """
 import uuid
 from datetime import datetime
-from typing import Optional, List
 from decimal import Decimal
 from enum import Enum
 
@@ -78,14 +77,14 @@ class Order(Base):
     billing_address: Mapped[str] = mapped_column(String(500), nullable=False)
     
     # Tracking information
-    tracking_number: Mapped[Optional[str]] = mapped_column(String(100))
-    carrier: Mapped[Optional[str]] = mapped_column(String(50))
+    tracking_number = mapped_column(String(100))
+    carrier = mapped_column(String(50))
     
     # Payment information
-    payment_intent_id: Mapped[Optional[str]] = mapped_column(String(255))
-    payment_method: Mapped[Optional[str]] = mapped_column(String(50))
+    payment_intent_id = mapped_column(String(255))
+    payment_method = mapped_column(String(50))
     
-    notes: Mapped[Optional[str]] = mapped_column(String(1000))
+    notes = mapped_column(String(1000))
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -93,12 +92,12 @@ class Order(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
-    shipped_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    shipped_at = mapped_column(DateTime)
+    delivered_at = mapped_column(DateTime, nullable=True)
     
     # Relationships
-    user: Mapped["User"] = relationship("User", back_populates="orders")
-    items: Mapped[List["OrderItem"]] = relationship(
+    user = relationship("User", back_populates="orders")
+    items = relationship(
         "OrderItem",
         back_populates="order",
         cascade="all, delete-orphan"
@@ -140,13 +139,13 @@ class OrderItem(Base):
     # Product details at time of order (for historical data)
     product_name: Mapped[str] = mapped_column(String(255), nullable=False)
     product_sku: Mapped[str] = mapped_column(String(100), nullable=False)
-    variant_info: Mapped[Optional[str]] = mapped_column(String(255))
+    variant_info = mapped_column(String(255))
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     # Relationships
     order: Mapped["Order"] = relationship("Order", back_populates="items")
-    product: Mapped["Product"] = relationship("Product", back_populates="order_items")
+    product = relationship("Product", back_populates="order_items")
 
     def __repr__(self) -> str:
         return f"<OrderItem(id={self.id}, product='{self.product_name}', quantity={self.quantity})>"

@@ -118,15 +118,15 @@ class Product(Base):
         "ProductReview",
         back_populates="product"
     )
-    cart_items: Mapped[List["CartItem"]] = relationship(
+    cart_items = relationship(
         "CartItem",
         back_populates="product"
     )
-    wishlist_items: Mapped[List["WishlistItem"]] = relationship(
+    wishlist_items = relationship(
         "WishlistItem",
         back_populates="product"
     )
-    order_items: Mapped[List["OrderItem"]] = relationship(
+    order_items = relationship(
         "OrderItem",
         back_populates="product"
     )
@@ -243,7 +243,7 @@ class ProductReview(Base):
     
     # Relationships
     product: Mapped["Product"] = relationship("Product", back_populates="reviews")
-    user: Mapped["User"] = relationship("User", back_populates="reviews")
+    user = relationship("User", back_populates="reviews")
 
     def __repr__(self) -> str:
         return f"<ProductReview(id={self.id}, rating={self.rating})>"

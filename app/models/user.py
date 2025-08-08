@@ -45,21 +45,21 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    cart_items: Mapped[List["CartItem"]] = relationship(
+    cart_items = relationship(
         "CartItem",
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    wishlist_items: Mapped[List["WishlistItem"]] = relationship(
+    wishlist_items = relationship(
         "WishlistItem",
         back_populates="user", 
         cascade="all, delete-orphan"
     )
-    orders: Mapped[List["Order"]] = relationship(
+    orders = relationship(
         "Order",
         back_populates="user"
     )
-    reviews: Mapped[List["ProductReview"]] = relationship(
+    reviews = relationship(
         "ProductReview",
         back_populates="user"
     )

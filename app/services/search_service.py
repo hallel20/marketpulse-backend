@@ -72,7 +72,7 @@ class SearchService:
             if not await self.es.indices.exists(index=self.product_index):
                 await self.es.indices.create(
                     index=self.product_index,
-                    body=product_mapping
+                    **product_mapping
                 )
                 print(f"Created Elasticsearch index: {self.product_index}")
         except Exception as e:
@@ -103,7 +103,7 @@ class SearchService:
             await self.es.index(
                 index=self.product_index,
                 id=str(product.id),
-                body=doc
+                document=doc
             )
             
         except Exception as e:
@@ -194,7 +194,7 @@ class SearchService:
         try:
             response = await self.es.search(
                 index=self.product_index,
-                body={
+                **{
                     "query": es_query,
                     "aggs": aggregations,
                     "sort": [
@@ -277,7 +277,7 @@ class SearchService:
         try:
             response = await self.es.search(
                 index=self.product_index,
-                body={
+                **{
                     "query": {
                         "bool": {
                             "must": [

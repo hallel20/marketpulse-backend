@@ -174,7 +174,7 @@ class AuthService:
         if not payload:
             return None
         
-        email: str = payload.get("sub")
+        email = payload.get("sub")
         if not email:
             return None
         

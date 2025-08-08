@@ -7,16 +7,20 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/marketpulse
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/marketpulse
       - REDIS_URL=redis://redis:6379
       - ELASTICSEARCH_URL=http://elasticsearch:9200
     depends_on:
-      - db
-      - redis
-      - elasticsearch
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
 
   # PostgreSQL Database
   db:
@@ -25,11 +29,18 @@ services:
       POSTGRES_DB: marketpulse
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketpulse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   # Redis for caching and Celery
   redis:
@@ -38,6 +49,13 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   # Elasticsearch for search
   elasticsearch:
@@ -46,48 +64,72 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     ports:
       - "9200:9200"
       - "9300:9300"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
 
   # Celery Worker
   celery:
     build: .
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+    command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/marketpulse
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/marketpulse
       - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - .:/app
+    restart: unless-stopped
 
   # Celery Beat (Task Scheduler)
   celery-beat:
     build: .
-    command: celery -A app.tasks.celery_app beat --loglevel=info
+    command: celery -A app.tasks.celery_app beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/marketpulse
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/marketpulse
       - REDIS_URL=redis://redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - .:/app
+    restart: unless-stopped
 
   # Flower (Celery monitoring)
   flower:
     build: .
-    command: celery -A app.tasks.celery_app flower --port=5555
+    command: celery -A app.tasks.celery_app flower --port=5555 --broker=redis://redis:6379
     ports:
       - "5555:5555"
     environment:
       - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@db:5432/marketpulse
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app
+    restart: unless-stopped
 
 volumes:
   postgres_data:

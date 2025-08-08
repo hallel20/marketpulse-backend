@@ -13,11 +13,11 @@ class Settings(BaseSettings):
     
     # Application
     DEBUG: bool = Field(default=False)
-    SECRET_KEY: str = Field(..., min_length=32)
+    SECRET_KEY: str = Field(default="", min_length=32)
     ALLOWED_HOSTS: List[str] = Field(default=["*"])
     
     # Database
-    DATABASE_URL: str = Field(..., description="PostgreSQL database URL")
+    DATABASE_URL: str = Field(default="", description="PostgreSQL database URL")
     TEST_DATABASE_URL: str = Field(default="", description="Test database URL")
     
     # Redis
